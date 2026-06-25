@@ -1,7 +1,7 @@
 import inquirer from "inquirer";
 import { runProfileMenu } from "./profileMenu.js";
 import { ui } from "../ui/theme.js";
-import { loadProcessingProfiles } from "../core/processingProfileManager.js";
+import { loadProcessingProfiles } from "../config/processingProfileManager.js";
 import { runOrderMenu } from "./orderMenu.js";
 import { teen } from "gradient-string";
 

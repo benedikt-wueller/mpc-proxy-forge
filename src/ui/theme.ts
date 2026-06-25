@@ -13,7 +13,4 @@ export const ui = {
 
     secondary: (text: string) => chalk.yellow(text),
     subtle: (text: string) => chalk.dim(text),
-
-    // Accents for specific highlights
-    highlight: (text: string) => chalk.magenta(text)
 };

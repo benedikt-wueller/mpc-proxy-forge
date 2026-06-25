@@ -1,5 +1,5 @@
-import type { DeckConfig } from "./orderConfigManager.js";
-import { PlaywrightChannel } from "./processingProfileManager.js";
+import type { DeckConfig } from "../config/orderConfigManager.js";
+import { PlaywrightChannel } from "../config/processingProfileManager.js";
 import { type Browser, chromium, firefox, webkit } from "playwright";
 import Bottleneck from "bottleneck";
 

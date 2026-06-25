@@ -7,9 +7,9 @@ import {
     loadProcessingProfiles,
     PlaywrightChannel,
     saveProcessingProfile, type UpscaylSettings
-} from "../core/processingProfileManager.js";
+} from "../config/processingProfileManager.js";
 import { confirmDialog, getSeparator } from "../utils/dialog.js";
-import { downloadUpscaylBinary, downloadUpscaylModels, getUpscaylModels } from "../core/upscaylManager.js";
+import { downloadUpscaylBinary, downloadUpscaylModels, getUpscaylModels } from "../pipeline/upscayl.js";
 import * as os from "node:os";
 import { Listr } from "listr2";
 

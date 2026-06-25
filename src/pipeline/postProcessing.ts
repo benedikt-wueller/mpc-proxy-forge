@@ -1,213 +1,28 @@
-import { DefaultProfile, type PostProcessingProfile } from "./processingProfileManager.js";
+import { DefaultProfile, type PostProcessingProfile } from "../config/processingProfileManager.js";
 import { rename } from "node:fs/promises";
-import type { ScryfallCard } from "./scryfall.js";
+import type { ScryfallCard } from "../clients/scryfall.js";
 import sharp from "sharp";
-import type { MoxfieldCard } from "./moxfield.js";
+import type { MoxfieldCard } from "../clients/moxfield.js";
 import { clamp } from "../utils/math.js";
+import {
+    type BlackoutBox,
+    COPYRIGHT_BOXES,
+    type Oval,
+    PROXY_NOTE_POSITIONS,
+    type ProxyNoteBox,
+    STAMP_OVAL,
+    STAMP_TRIANGLE,
+    type StampOptions,
+    type Triangle
+} from "./cardLayout.js";
 
 sharp.cache(false);
-
-const STAMP_OVAL = {
-    x: 0.5,
-    y: 0.936,
-    rx: 0.05,
-    ry: 0.021,
-} as Oval;
-
-interface Oval {
-    x: number,
-    y: number,
-    rx: number,
-    ry: number,
-}
-
-const STAMP_TRIANGLE = {
-    x1: 0.4525,
-    y1: 0.915,
-    x2: 0.5,
-    y2: 0.952,
-    x3: 0.5475,
-    y3: 0.915
-} as Triangle;
-
-interface Triangle {
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
-    x3: number,
-    y3: number
-}
-
-interface StampOptions {
-    fillColor: string,
-    strokeColor?: string,
-    strokeWidth: number,
-    opacity: number
-}
-
-const REFERENCE_WIDTH = 745;
-const REFERENCE_HEIGHT = 1040;
-
-const COPYRIGHT_BOXES = {
-    '1993': {
-        default: {
-            x1: 61 / REFERENCE_WIDTH,
-            x2: 466 / REFERENCE_WIDTH,
-            y1: 964 / REFERENCE_HEIGHT,
-            y2: 988 / REFERENCE_HEIGHT
-        } as BlackoutBox
-    },
-    '1997': {
-        default: {
-            x1: 70 / REFERENCE_WIDTH,
-            x2: 585 / REFERENCE_WIDTH,
-            y1: 961 / REFERENCE_HEIGHT,
-            y2: 988 / REFERENCE_HEIGHT
-        } as BlackoutBox
-    },
-    '2003': {
-        default: {
-            x1: 56 / REFERENCE_WIDTH,
-            x2: 468 / REFERENCE_WIDTH,
-            y1: 979 / REFERENCE_HEIGHT,
-            y2: 1002 / REFERENCE_HEIGHT
-        } as BlackoutBox,
-        planeswalker: {
-            x1: 183 / REFERENCE_WIDTH,
-            x2: 569 / REFERENCE_WIDTH,
-            y1: 986 / REFERENCE_HEIGHT,
-            y2: 1016 / REFERENCE_HEIGHT
-        } as BlackoutBox,
-        planechase: {
-            x1: 722 / REFERENCE_WIDTH,
-            x2: 740 / REFERENCE_WIDTH,
-            y1: 318 / REFERENCE_HEIGHT,
-            y2: 714 / REFERENCE_HEIGHT
-        } as BlackoutBox
-    },
-    '2015': {
-        default: {
-            x1: 430 / REFERENCE_WIDTH,
-            x2: 700 / REFERENCE_WIDTH,
-            y1: 970 / REFERENCE_HEIGHT,
-            y2: 1010 / REFERENCE_HEIGHT,
-        } as BlackoutBox,
-        creature: {
-            x1: 430 / REFERENCE_WIDTH,
-            x2: 700 / REFERENCE_WIDTH,
-            y1: 990 / REFERENCE_HEIGHT,
-            y2: 1010 / REFERENCE_HEIGHT
-        } as BlackoutBox,
-        creatureUniversesBeyond: {
-            x1: 430 / REFERENCE_WIDTH,
-            x2: 575 / REFERENCE_WIDTH,
-            y1: 970 / REFERENCE_HEIGHT,
-            y2: 1010 / REFERENCE_HEIGHT
-        } as BlackoutBox,
-        planeswalker: {
-            x1: 430 / REFERENCE_WIDTH,
-            x2: 700 / REFERENCE_WIDTH,
-            y1: 990 / REFERENCE_HEIGHT,
-            y2: 1010 / REFERENCE_HEIGHT
-        } as BlackoutBox,
-        planechase: {
-            x1: 716 / REFERENCE_WIDTH,
-            x2: 736 / REFERENCE_WIDTH,
-            y1: 30 / REFERENCE_HEIGHT,
-            y2: 371 / REFERENCE_HEIGHT
-        } as BlackoutBox
-    }
-};
-
-const PROXY_NOTE_POSITIONS = {
-    '1993': {
-        default: {
-            x: 0.09,
-            y: 0.935,
-            horizontalAlignment: 'left',
-            verticalAlignment: 'top',
-            orientation: 'horizontal',
-            size: 0.012
-        } as ProxyNoteBox
-    },
-    '1997': {
-        default: {
-            x: 0.08,
-            y: 0.935,
-            horizontalAlignment: 'left',
-            verticalAlignment: 'top',
-            orientation: 'horizontal',
-            size: 0.012
-        } as ProxyNoteBox
-    },
-    '2003': {
-        default: {
-            x: 0.08,
-            y: 0.945,
-            horizontalAlignment: 'left',
-            verticalAlignment: 'top',
-            orientation: 'horizontal',
-            size: 0.012
-        } as ProxyNoteBox,
-        planeswalker: {
-            x: 0.5,
-            y: 0.955,
-            horizontalAlignment: 'center',
-            verticalAlignment: 'top',
-            orientation: 'horizontal',
-            size: 0.012
-        } as ProxyNoteBox,
-        planechase: {
-            x: 0.975,
-            y: 0.5,
-            horizontalAlignment: 'left',
-            verticalAlignment: 'center',
-            orientation: 'vertical',
-            size: 0.014
-        } as ProxyNoteBox
-    },
-    '2015': {
-        default: {
-            x: 0.93,
-            y: 0.955,
-            horizontalAlignment: 'right',
-            verticalAlignment: 'top',
-            orientation: 'horizontal',
-            size: 0.012
-        } as ProxyNoteBox,
-        planechase: {
-            x: 0.967,
-            y: 0.05,
-            horizontalAlignment: 'left',
-            verticalAlignment: 'top',
-            orientation: 'vertical',
-            size: 0.014
-        } as ProxyNoteBox
-    }
-}
-
-interface BlackoutBox {
-    x1: number,
-    x2: number,
-    y1: number,
-    y2: number
-}
 
 interface CompositeBox {
     top: number,
     left: number,
     width: number,
     height: number
-}
-
-interface ProxyNoteBox {
-    horizontalAlignment: 'left' | 'center' | 'right',
-    verticalAlignment: 'top' | 'center',
-    orientation: 'vertical' | 'horizontal'
-    x: number,
-    y: number,
-    size: number,
 }
 
 export async function postProcessImage(filePath: string, card: {
@@ -282,7 +97,6 @@ async function fixCorners(buffer: Buffer, config: PostProcessingProfile) {
 
     const borderRadius = width * config.cornerRadius;
 
-    // 1. Create a mask that isolates the curved edge
     const mask = Buffer.from(`<svg width="${width}" height="${height}">
       <rect 
         x="0" 
@@ -295,8 +109,7 @@ async function fixCorners(buffer: Buffer, config: PostProcessingProfile) {
     </svg>`
     );
 
-    // 2. The "Smear" Layer
-    // We take the image, blur it heavily (to "push" the border colors out), then mask it so it only exists in the corner areas.
+    // Take the image, blur it heavily (to "push" the border colors out), then mask it so it only exists in the corner areas.
     const upscaled1 = await resizeAndCrop(buffer, 1.0075, width, height, mask);
     const upscaled2 = await resizeAndCrop(buffer, 1.0125, width, height, mask);
     const upscaled3 = await resizeAndCrop(buffer, 1.02, width, height, mask);
@@ -319,15 +132,13 @@ async function fixCorners(buffer: Buffer, config: PostProcessingProfile) {
         .png()
         .toBuffer();
 
-    // 3. Composite: Patch -> Original Card -> Background
-    // This fills the transparent corner cutouts with a smeared version of the pixels exactly at the curve's edge.
+    // Fills the transparent corner cutouts with a smeared version of the pixels exactly at the curve's edge.
     return await sharp({
         create: { width, height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } }
     })
         .composite([
             { input: buffer, top: 0, left: 0 },
-            { input: smearLayer, top: 0, left: 0 },
-            //{ input: bottomBorderSmear, top: 0, left: 0 }
+            { input: smearLayer, top: 0, left: 0 }
         ])
         .png()
         .toBuffer();
@@ -434,16 +245,13 @@ async function applyBlurredBoxes(buffer: Buffer, boxes: CompositeBox[], strength
             .toBuffer();
 
         // Apply a second blur to smooth out the overlapping areas
-        const canvas2Buffer = await sharp(canvas1Buffer)
+        const canvasBlur = await sharp(canvas1Buffer)
             .blur(strength)
             .png()
             .toBuffer();
 
-        // Inside overlaps: Canvas 2 is 100% opaque and hides the seams.
-        // At outer edges: Canvas 2's faded alpha blends over Canvas 1's solid alpha,
-        // restoring edge opacity and full color intensity.
         const combinedLayersBuffer = await sharp(canvas1Buffer)
-            .composite([{ input: canvas2Buffer, blend: 'over' }])
+            .composite([{ input: canvasBlur, blend: 'over' }])
             .png()
             .toBuffer();
 

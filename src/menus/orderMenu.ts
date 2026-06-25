@@ -6,11 +6,11 @@ import {
     loadOrders,
     type Order,
     saveOrder
-} from "../core/orderConfigManager.js";
+} from "../config/orderConfigManager.js";
 import inquirer from "inquirer";
-import { CARD_STOCK_FOIL_POSSIBLE, CARD_STOCKS } from "../core/mpcManager.js";
-import { processOrder } from "../core/orderProcessing.js";
-import { type ProcessingProfile } from "../core/processingProfileManager.js";
+import { CARD_STOCK_FOIL_POSSIBLE, CARD_STOCKS } from "../output/mpcAutofill.js";
+import { processOrder } from "../pipeline/orderProcessing.js";
+import { type ProcessingProfile } from "../config/processingProfileManager.js";
 import { exists } from "../utils/fs.js";
 import path from "node:path";
 import { rm } from "node:fs/promises";

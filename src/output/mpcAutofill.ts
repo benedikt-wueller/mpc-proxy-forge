@@ -1,7 +1,7 @@
 import { toXML } from "jstoxml";
-import type { Order } from "./orderConfigManager.js";
-import type { MoxfieldCard } from "./moxfield.js";
-import type { CardQueueItem } from "./orderProcessing.js";
+import type { Order } from "../config/orderConfigManager.js";
+import type { MoxfieldCard } from "../clients/moxfield.js";
+import type { CardQueueItem } from "../pipeline/types.js";
 
 export const BRACKETS = [18, 36, 55, 72, 90, 108, 126, 144, 162, 180, 198, 216, 234, 396, 504, 612];
 

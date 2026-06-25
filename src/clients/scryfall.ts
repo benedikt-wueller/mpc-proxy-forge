@@ -69,7 +69,6 @@ export async function findScryfallCard(card: MoxfieldCardDetails) {
 }
 
 export async function downloadScryfallImage(url: string, path: string): Promise<string | undefined> {
-    // Don't download the same image multiple times.
     if (await exists(path)) return Promise.resolve(path);
 
     const resp = await scryfallImageBottleneck.schedule(() => fetch(url));
