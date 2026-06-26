@@ -211,7 +211,7 @@ async function runUpdateOrder(order: Order) {
             type: 'number',
             name: 'deckCount',
             message: 'How many Moxfield decks?',
-            default: order.decks.length
+            default: Math.max(1, order.decks.length)
         }
     ]);
 
@@ -261,6 +261,8 @@ async function runUpdateOrder(order: Order) {
 
         decks.push(previousDeckConfig);
     }
+
+    // TODO: ask for token quantity if selected
 
     order = {
         ...order,
