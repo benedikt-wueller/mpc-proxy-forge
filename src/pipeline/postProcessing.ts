@@ -1,5 +1,5 @@
 import { DefaultProfile, type PostProcessingProfile } from "../config/processingProfileManager.js";
-import { rename } from "node:fs/promises";
+import { renameWithRetry } from "../utils/fs.js";
 import type { ScryfallCard } from "../clients/scryfall.js";
 import sharp from "sharp";
 import type { MoxfieldCard } from "../clients/moxfield.js";
@@ -50,7 +50,7 @@ export async function postProcessImage(filePath: string, card: {
     buffer = await applyBleed(buffer, config, card.scryfallCard);
 
     await sharp(buffer).png().toFile(tmpFilePath);
-    await rename(tmpFilePath, filePath);
+    await renameWithRetry(tmpFilePath, filePath);
 }
 
 async function applyBleed(buffer: Buffer, config: PostProcessingProfile, scryfallCard: ScryfallCard) {

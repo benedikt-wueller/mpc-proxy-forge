@@ -12,6 +12,7 @@ import { confirmDialog, getSeparator } from "../utils/dialog.js";
 import { downloadUpscaylBinary, downloadUpscaylModels, getUpscaylModels } from "../pipeline/upscayl.js";
 import * as os from "node:os";
 import { Listr } from "listr2";
+import { getUniqueName } from "../utils/getUniqueName.js";
 
 export async function runProfileMenu() {
     console.clear();
@@ -128,7 +129,7 @@ async function runCreateProfile(existingProfiles: ProcessingProfile[]) {
             type: 'input',
             name: 'name',
             message: 'Profile Name:',
-            default: existingProfiles.some(c => c.name === defaultProfile.name) ? `${defaultProfile.name} copy` : defaultProfile.name,
+            default: getUniqueName(defaultProfile.name, existingProfiles.map(x => x.name)),
             validate: (value) => existingProfiles.some(c => c.name === value) ? 'Profile name already exists' : true
         },
         {
@@ -167,9 +168,20 @@ async function runUpdateProfile(profile: ProcessingProfile) {
 
     profile.playwrightChannel = channelSelect.channel;
 
+    profile.postProcessing.upscaling = await runUpscaylSettings(profile.postProcessing.upscaling);
+
     console.log(ui.subtitle('Post-Processing'));
     console.log('These values will be used to help make images look better on the proxy.');
     console.log('If unsure, leave these values as-is.\n');
+
+    const useDefaults = await confirmDialog('Would you like to use the default post-processing values?', true);
+
+    if (useDefaults) {
+        profile.postProcessing = { ...DefaultProfile.postProcessing };
+        await saveProcessingProfile(profile);
+        console.log(ui.success('Processing profile setup complete.') + '\n');
+        return;
+    }
 
     const postProcessing = await inquirer.prompt([
         {
@@ -219,8 +231,6 @@ async function runUpdateProfile(profile: ProcessingProfile) {
             borderCrop: parseFloat(postProcessing.borderCrop)
         }
     }
-
-    profile.postProcessing.upscaling = await runUpscaylSettings(profile.postProcessing.upscaling);
 
     console.log(ui.subtitle('Copyright Behavior'));
     console.log('Magic cards contain a copyright notice that might cause issues with some print services.');
@@ -278,11 +288,11 @@ async function runUpscaylSettings(settings: UpscaylSettings) {
             name: 'choice',
             message: 'How would you like to configure Upscayl?',
             choices: [
+                { name: 'Use existing cli', value: 'local' },
                 { name: 'Download to this directory', value: 'install' },
-                { name: 'Find existing cli', value: 'local' },
                 { name: 'Disable', value: 'disabled' }
             ],
-            default: !!settings.binaryFile ? 'local' : (settings.enabled ? 'install' : 'disabled')
+            default: !!settings.binaryFile ? 'local' : 'disabled'
         }
     ]);
 

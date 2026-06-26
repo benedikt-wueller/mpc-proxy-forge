@@ -35,7 +35,7 @@ export async function runMainMenu(): Promise<void> {
             return runMainMenu();
         }
     } catch (error) {
-        console.log(ui.attention('Operation cancelled.'));
+        console.error(ui.error('An error occurred:'), error);
     }
 
     process.exit(0);

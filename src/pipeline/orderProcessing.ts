@@ -13,6 +13,7 @@ import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { postProcessImage } from "./postProcessing.js";
 import { createMpcAutofillOrder } from "../output/mpcAutofill.js";
 import sharp from "sharp";
+import { confirmDialog } from "../utils/dialog.js";
 
 interface Context {
     decks: {
@@ -36,7 +37,8 @@ interface Context {
         postProcessed: number,
         converted: number
     },
-    missingCards: Record<string, string>
+    missingCards: Record<string, string>,
+    aborted: boolean
 }
 
 export async function processOrder(order: Order) {
@@ -63,7 +65,8 @@ export async function processOrder(order: Order) {
         ]);
 
         await tasks.run(context);
-        console.log('\n' + ui.information(`You can find your order at ${mainDir}`) + '\n');
+        console.log('\n' + ui.success(`Order processing complete. You can find your files at ${mainDir}`));
+        console.log(ui.information('To complete your order, move these files to the MPC Autofill directory or copy the autofill binary to the this directory and run it.'));
     } catch (err) {
         console.error('\n' + ui.error('An error occurred:'), err);
     }
@@ -74,6 +77,10 @@ export async function processOrder(order: Order) {
     });
 
     await saveOrder(order);
+
+    if (await confirmDialog('\nDo you want to exit the application?', true)) {
+        process.exit(0);
+    }
 }
 
 function createContext(): Context {
@@ -94,7 +101,8 @@ function createContext(): Context {
             postProcessed: 0,
             converted: 0
         },
-        missingCards: {}
+        missingCards: {},
+        aborted: false
     };
 }
 
@@ -195,7 +203,7 @@ function enqueueCards(ctx: Context, order: Order) {
             id: key,
             face: 'front',
             scryfallUrl: frontImage,
-            path: `${card.scryfallCard.id}-front.png`,
+            path: `${key}-front.png`,
             state: ProcessingState.NotDownloaded
         });
 
@@ -205,7 +213,7 @@ function enqueueCards(ctx: Context, order: Order) {
                 id: key,
                 face: 'back',
                 scryfallUrl: backImage,
-                path: `${card.scryfallCard.id}-back.png`,
+                path: `${key}-back.png`,
                 state: ProcessingState.NotDownloaded
             });
         }
@@ -220,11 +228,11 @@ function enqueueCards(ctx: Context, order: Order) {
     ctx.queues[ProcessingState.NotDownloaded].cards = ctx.queues[ProcessingState.NotDownloaded].cards.filter(x => !restoredIds.includes(x.id));
 
     ctx.stats = {
-        total: ctx.queues[ProcessingState.NotDownloaded].cards.length,
-        downloaded: 0,
-        upscaled: 0,
-        postProcessed: 0,
-        converted: 0,
+        total: Object.values(ctx.queues).map(x => x.cards.length).reduce((acc, val) => acc + val, 0),
+        downloaded: ctx.queues[ProcessingState.Downloaded].cards.length,
+        upscaled: ctx.queues[ProcessingState.Upscaled].cards.length,
+        postProcessed: ctx.queues[ProcessingState.PostProcessed].cards.length,
+        converted: ctx.queues[ProcessingState.Converted].cards.length,
     };
 }
 
@@ -303,15 +311,25 @@ function pipelineStage(options: PipelineStageOptions): ListrTask {
             const queue = ctx.queues[options.queueState];
             const nextQueue = ctx.queues[options.nextState];
 
-            while ((previousQueue ? !previousQueue.done : false) || queue.cards.length > 0) {
-                while (queue.cards.length === 0) {
+            while (!ctx.aborted && ((previousQueue ? !previousQueue.done : false) || queue.cards.length > 0)) {
+                while (!ctx.aborted && queue.cards.length === 0) {
                     await delay(100);
                 }
+
+                if (ctx.aborted || queue.cards.length === 0) break;
 
                 subtask.title = `${options.title} (${ctx.stats[options.statKey] + 1}/${ctx.stats.total})`;
 
                 const item = queue.cards.shift()!;
-                await options.handler(ctx, item);
+                try {
+                    await options.handler(ctx, item);
+                } catch (err) {
+                    // Keep the in-flight item in its queue so it is not lost on resume,
+                    // and signal all other concurrent stages to stop mutating files/state.
+                    queue.cards.unshift(item);
+                    ctx.aborted = true;
+                    throw err;
+                }
 
                 ctx.stats[options.statKey]++;
                 item.state = options.nextState;

@@ -16,6 +16,7 @@ import path from "node:path";
 import { rm } from "node:fs/promises";
 import { runSelectProfile } from "./profileMenu.js";
 import { confirmDialog, getSeparator } from "../utils/dialog.js";
+import { getUniqueName } from "../utils/getUniqueName.js";
 
 export async function runOrderMenu() {
     console.clear();
@@ -168,7 +169,7 @@ async function runCreateOrder(existingOrders: Order[]) {
             type: 'input',
             name: 'name',
             message: 'Order Name:',
-            default: existingOrders.some(c => c.name === defaultOrder.name) ? `${defaultOrder.name} copy` : defaultOrder.name,
+            default: getUniqueName(defaultOrder.name, existingOrders.map(x => x.name)),
             validate: (value) => existingOrders.some(c => c.name === value) ? 'Order name already exists' : true
         }
     ]);

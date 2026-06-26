@@ -42,10 +42,10 @@ interface MpcAutofillWrapper {
 
 interface MpcAutofillCard {
     id: string,
-    name: string,
-    query?: string,
+    name?: string,
+    query?: string | undefined,
     slots: string,
-    sourceType: 'Local File' | undefined
+    sourceType?: 'Local File'
 }
 
 export function findBracket(sum: number) {
@@ -81,6 +81,7 @@ export function createMpcAutofillOrder(order: Order, items: CardQueueItem[], car
             card: {
                 id: front.path,
                 name: front.path,
+                query: undefined,
                 slots: frontSlots.join(','),
                 sourceType: 'Local File'
             }
@@ -91,6 +92,7 @@ export function createMpcAutofillOrder(order: Order, items: CardQueueItem[], car
                 card: {
                     id: back.path,
                     name: back.path,
+                    query: undefined,
                     slots: backSlots.join(','),
                     sourceType: 'Local File'
                 }
@@ -107,9 +109,7 @@ export function createMpcAutofillOrder(order: Order, items: CardQueueItem[], car
         backs.push({
             card: {
                 id: order.cardBack,
-                name: order.cardBack,
-                slots: remainingBackSlots.join(','),
-                sourceType: undefined
+                slots: remainingBackSlots.join(',')
             }
         });
     }

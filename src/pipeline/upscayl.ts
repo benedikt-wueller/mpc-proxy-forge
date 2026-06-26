@@ -1,6 +1,6 @@
-import fs, { rename } from "node:fs/promises";
+import fs from "node:fs/promises";
 import path from "node:path";
-import { exists, grantExecutionPermission } from "../utils/fs.js";
+import { exists, grantExecutionPermission, renameWithRetry } from "../utils/fs.js";
 import type { PostProcessingProfile } from "../config/processingProfileManager.js";
 import { exec } from "node:child_process";
 import sharp from 'sharp';
@@ -33,7 +33,7 @@ export async function upscaleImage(filePath: string, config: PostProcessingProfi
         })
     });
 
-    await rename(temporaryPath, filePath);
+    await renameWithRetry(temporaryPath, filePath);
 }
 
 export async function downloadUpscaylBinary(targetPath: string) {
