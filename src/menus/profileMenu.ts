@@ -317,6 +317,7 @@ async function runUpscaylSettings(settings: UpscaylSettings) {
         }
     ]);
 
+    settings.enabled = true;
     settings.binaryFile = paths.binaryFile;
     settings.modelsDirectory = paths.modelsDirectory;
 

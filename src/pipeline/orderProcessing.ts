@@ -304,7 +304,6 @@ function pipelineStage(options: PipelineStageOptions): ListrTask {
         task: async (ctx: Context, subtask) => {
             if (options.skip) {
                 subtask.title = `${options.title} (skipped)`;
-                return;
             }
 
             const previousQueue = options.previousState ? ctx.queues[options.previousState] : undefined;
@@ -318,11 +317,15 @@ function pipelineStage(options: PipelineStageOptions): ListrTask {
 
                 if (ctx.aborted || queue.cards.length === 0) break;
 
-                subtask.title = `${options.title} (${ctx.stats[options.statKey] + 1}/${ctx.stats.total})`;
+                if (!options.skip) {
+                    subtask.title = `${options.title} (${ctx.stats[options.statKey] + 1}/${ctx.stats.total})`;
+                }
 
                 const item = queue.cards.shift()!;
                 try {
-                    await options.handler(ctx, item);
+                    if (!options.skip) {
+                        await options.handler(ctx, item);
+                    }
                 } catch (err) {
                     // Keep the in-flight item in its queue so it is not lost on resume,
                     // and signal all other concurrent stages to stop mutating files/state.
