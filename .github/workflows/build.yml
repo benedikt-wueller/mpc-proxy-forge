@@ -25,15 +25,15 @@ jobs:
         run: bun run build
 
       - name: Compile Windows Binary
-        run: bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile mpc-proxy-forge-windows.exe
+        run: bun build ./src/index.ts --compile --target=bun-windows-x64 --external chromium-bidi --outfile mpc-proxy-forge-windows.exe
 
       - name: Compile macOS Binary
         run: |
-          bun build ./src/index.ts --compile --target=bun-darwin-x64 --outfile mpc-proxy-forge-macos-x64
-          bun build ./src/index.ts --compile --target=bun-darwin-arm64 --outfile mpc-proxy-forge-macos-arm64
+          bun build ./src/index.ts --compile --target=bun-darwin-x64 --external chromium-bidi --outfile mpc-proxy-forge-macos-x64
+          bun build ./src/index.ts --compile --target=bun-darwin-arm64 --external chromium-bidi --outfile mpc-proxy-forge-macos-arm64
 
       - name: Compile Linux Binary
-        run: bun build ./src/index.ts --compile --target=bun-linux-x64 --outfile mpc-proxy-forge-linux
+        run: bun build ./src/index.ts --compile --target=bun-linux-x64 --external chromium-bidi --outfile mpc-proxy-forge-linux
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
