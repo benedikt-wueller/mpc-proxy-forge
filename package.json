@@ -12,7 +12,10 @@
     "start": "node ./dist/index.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Benedikt Wüller",
+  "repository": {
+    "url": "https://github.com/benedikt-wueller/mpc-proxy-forge"
+  },
   "license": "ISC",
   "description": "",
   "devDependencies": {
