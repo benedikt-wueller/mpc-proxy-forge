@@ -143,7 +143,7 @@ vite.config.ts.timestamp-*
 .vite/
 
 # mpc-proxy-forge
-config/
-upscayl/
-orders/
-decks/
+/config/
+/upscayl/
+/orders/
+/decks/
