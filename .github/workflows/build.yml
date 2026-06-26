@@ -1,43 +1,66 @@
-name: Build Binaries
+name: Build and Release
 
 on:
   release:
     types: [ created ]
 
+permissions:
+  contents: write
+
 jobs:
   build:
-    name: Compile Executables
+    name: Compile and Package
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
 
       - name: Install Dependencies
-        run: bun install
-
-      - name: Type Check
-        run: bun run build
-
-      - name: Compile Windows Binary
-        run: bun build ./src/index.ts --compile --target=bun-windows-x64 --external chromium-bidi --outfile mpc-proxy-forge-windows.exe
-
-      - name: Compile macOS Binary
         run: |
-          bun build ./src/index.ts --compile --target=bun-darwin-x64 --external chromium-bidi --outfile mpc-proxy-forge-macos-x64
-          bun build ./src/index.ts --compile --target=bun-darwin-arm64 --external chromium-bidi --outfile mpc-proxy-forge-macos-arm64
+          bun install
+          # Pre-fetch bindings for all target platforms
+          bun add --os=win32 --cpu=x64 sharp
+          bun add --os=darwin --cpu=x64 sharp
+          bun add --os=darwin --cpu=arm64 sharp
+          bun add --os=linux --cpu=x64 sharp
 
-      - name: Compile Linux Binary
-        run: bun build ./src/index.ts --compile --target=bun-linux-x64 --external chromium-bidi --outfile mpc-proxy-forge-linux
+      - name: Build and Package
+        run: |
+          # --- WINDOWS ---
+          bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile mpc-proxy-forge.exe
+          mkdir -p dist-win/node_modules/@img
+          cp mpc-proxy-forge.exe dist-win/
+          cp -r node_modules/@img/sharp-win32-x64 dist-win/node_modules/@img/
+          zip -r mpc-proxy-forge-windows.zip dist-win/
 
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+          # --- MACOS X64 ---
+          bun build ./src/index.ts --compile --target=bun-darwin-x64 --outfile mpc-proxy-forge
+          mkdir -p dist-mac-x64/node_modules/@img
+          cp mpc-proxy-forge dist-mac-x64/
+          cp -r node_modules/@img/sharp-darwin-x64 dist-mac-x64/node_modules/@img/
+          zip -r mpc-proxy-forge-macos-x64.zip dist-mac-x64/
+
+          # --- MACOS ARM64 ---
+          bun build ./src/index.ts --compile --target=bun-darwin-arm64 --outfile mpc-proxy-forge
+          mkdir -p dist-mac-arm64/node_modules/@img
+          cp mpc-proxy-forge dist-mac-arm64/
+          cp -r node_modules/@img/sharp-darwin-arm64 dist-mac-arm64/node_modules/@img/
+          zip -r mpc-proxy-forge-macos-arm64.zip dist-mac-arm64/
+
+          # --- LINUX ---
+          bun build ./src/index.ts --compile --target=bun-linux-x64 --outfile mpc-proxy-forge
+          mkdir -p dist-linux/node_modules/@img
+          cp mpc-proxy-forge dist-linux/
+          cp -r node_modules/@img/sharp-linux-x64 dist-linux/node_modules/@img/
+          zip -r mpc-proxy-forge-linux.zip dist-linux/
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: compiled-binaries
-          path: mpc-proxy-forge-*
-          retention-days: 7
+          files: |
+            mpc-proxy-forge-windows.zip
+            mpc-proxy-forge-macos-x64.zip
+            mpc-proxy-forge-macos-arm64.zip
+            mpc-proxy-forge-linux.zip
