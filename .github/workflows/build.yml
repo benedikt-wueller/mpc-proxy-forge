@@ -1,0 +1,43 @@
+name: Build Binaries
+
+on:
+  release:
+    types: [ created ]
+
+jobs:
+  build:
+    name: Compile Executables
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install
+
+      - name: Type Check
+        run: bun run build
+
+      - name: Compile Windows Binary
+        run: bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile mpc-proxy-forge-windows.exe
+
+      - name: Compile macOS Binary
+        run: |
+          bun build ./src/index.ts --compile --target=bun-darwin-x64 --outfile mpc-proxy-forge-macos-x64
+          bun build ./src/index.ts --compile --target=bun-darwin-arm64 --outfile mpc-proxy-forge-macos-arm64
+
+      - name: Compile Linux Binary
+        run: bun build ./src/index.ts --compile --target=bun-linux-x64 --outfile mpc-proxy-forge-linux
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-binaries
+          path: mpc-proxy-forge-*
+          retention-days: 7
