@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,19 +16,15 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            archive: windows
-            nodeExe: node.exe
+            platform: windows-x64
             launcher: mpc-proxy-forge.cmd
 
           - os: ubuntu-latest
-            archive: linux
-            nodeExe: node
+            platform: linux-x64
             launcher: mpc-proxy-forge
 
           - os: macos-latest
-            archive: macos
-            nodeExe: node
-            launcher: mpc-proxy-forge
+            platform: macos-arm64
 
     runs-on: ${{ matrix.os }}
 
@@ -48,69 +45,92 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Create release folder
+      - name: Create release directory
         shell: bash
         run: |
           mkdir release
 
+          cp package.json release/
+          cp package-lock.json release/
+
+          cp -R dist release/
+
       - name: Install production dependencies
         shell: bash
         run: |
-          cp package.json release/
-          cp package-lock.json release/
           cd release
           npm ci --omit=dev
 
-      - name: Copy bundle
+      - name: Cleanup release
         shell: bash
         run: |
-          mkdir -p release/dist
-          cp dist/bundle.js release/dist/
+          rm release/package-lock.json
 
-      - name: Copy Node runtime
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          cp "$(which node)" release/node
-          chmod +x release/node
+      ##########################################################
+      # Windows
+      ##########################################################
 
-      - name: Copy Node runtime (Windows)
+      - name: Prepare Windows runtime
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Copy-Item "$env:RUNNER_TOOL_CACHE\node\*\x64\node.exe" release\node.exe
+          Copy-Item (node -p "process.execPath") release\node.exe
 
-      - name: Create launcher (Linux/macOS)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          cat > release/mpc-proxy-forge <<'EOF'
-          #!/bin/sh
-          DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-          exec "$DIR/node" "$DIR/dist/index.js" "$@"
-          EOF
-          chmod +x release/mpc-proxy-forge
-
-      - name: Create launcher (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
           @'
           @echo off
           "%~dp0\node.exe" "%~dp0\dist\index.js" %*
           '@ | Set-Content release\mpc-proxy-forge.cmd
 
-      - name: Archive
+      ##########################################################
+      # Linux / macOS
+      ##########################################################
+
+      - name: Prepare Unix runtime
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cp "$(node -p 'process.execPath')" release/node
+
+          chmod +x release/node
+
+          cat > release/mpc-proxy-forge <<'EOF'
+          #!/bin/sh
+          DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+          exec "$DIR/node" "$DIR/dist/index.js" "$@"
+          EOF
+
+          chmod +x release/mpc-proxy-forge
+
+      ##########################################################
+      # Archive
+      ##########################################################
+
+      - name: Create ZIP (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path release\* `
+            -DestinationPath mpc-proxy-forge-${{ github.ref_name }}-${{ matrix.platform }}.zip
+
+      - name: Create ZIP (Linux/macOS)
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           cd release
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            powershell Compress-Archive * ../mpc-proxy-forge-${{ matrix.archive }}.zip
-          else
-            zip -r ../mpc-proxy-forge-${{ matrix.archive }}.zip .
-          fi
+          zip -r "../mpc-proxy-forge-${{ github.ref_name }}-${{ matrix.platform }}.zip" .
 
-      - name: Upload to GitHub Release
+      ##########################################################
+      # Release
+      ##########################################################
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpc-proxy-forge-${{ matrix.platform }}
+          path: mpc-proxy-forge-${{ github.ref_name }}-${{ matrix.platform }}.zip
+
+      - name: Attach to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: mpc-proxy-forge-${{ matrix.archive }}.zip
+          files: mpc-proxy-forge-${{ github.ref_name }}-${{ matrix.platform }}.zip
