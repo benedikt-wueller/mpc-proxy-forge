@@ -1,6 +1,6 @@
 import type { DeckConfig } from "../config/orderConfigManager.js";
 import { PlaywrightChannel } from "../config/processingProfileManager.js";
-import { type Browser, chromium, firefox, webkit } from "playwright";
+import { type Browser, chromium, firefox, webkit } from "playwright-core";
 import Bottleneck from "bottleneck";
 
 export type MoxfieldDeck = {

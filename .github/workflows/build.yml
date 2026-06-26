@@ -1,66 +1,116 @@
-name: Build and Release
+name: Build Release
 
 on:
-  release:
-    types: [ created ]
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: Compile and Package
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            archive: windows
+            nodeExe: node.exe
+            launcher: mpc-proxy-forge.cmd
+
+          - os: ubuntu-latest
+            archive: linux
+            nodeExe: node
+            launcher: mpc-proxy-forge
+
+          - os: macos-latest
+            archive: macos
+            nodeExe: node
+            launcher: mpc-proxy-forge
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v1
+
+      - uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: 22
+          cache: npm
 
-      - name: Install Dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Create release folder
+        shell: bash
         run: |
-          bun install
-          # Pre-fetch bindings for all target platforms
-          bun add --os=win32 --cpu=x64 sharp
-          bun add --os=darwin --cpu=x64 sharp
-          bun add --os=darwin --cpu=arm64 sharp
-          bun add --os=linux --cpu=x64 sharp
+          mkdir release
 
-      - name: Build and Package
+      - name: Install production dependencies
+        shell: bash
         run: |
-          # --- WINDOWS ---
-          bun build ./src/index.ts --compile --target=bun-windows-x64 --external chromium-bidi --outfile mpc-proxy-forge.exe
-          mkdir -p dist-win/node_modules/@img
-          cp mpc-proxy-forge.exe dist-win/
-          cp -r node_modules/@img/sharp-win32-x64 dist-win/node_modules/@img/
-          zip -r mpc-proxy-forge-windows.zip dist-win/
+          cp package.json release/
+          cp package-lock.json release/
+          cd release
+          npm ci --omit=dev
 
-          # --- MACOS X64 ---
-          bun build ./src/index.ts --compile --target=bun-darwin-x64 --external chromium-bidi --outfile mpc-proxy-forge
-          mkdir -p dist-mac-x64/node_modules/@img
-          cp mpc-proxy-forge dist-mac-x64/
-          cp -r node_modules/@img/sharp-darwin-x64 dist-mac-x64/node_modules/@img/
-          zip -r mpc-proxy-forge-macos-x64.zip dist-mac-x64/
+      - name: Copy bundle
+        shell: bash
+        run: |
+          mkdir -p release/dist
+          cp dist/bundle.js release/dist/
 
-          # --- MACOS ARM64 ---
-          bun build ./src/index.ts --compile --target=bun-darwin-arm64 --external chromium-bidi --outfile mpc-proxy-forge
-          mkdir -p dist-mac-arm64/node_modules/@img
-          cp mpc-proxy-forge dist-mac-arm64/
-          cp -r node_modules/@img/sharp-darwin-arm64 dist-mac-arm64/node_modules/@img/
-          zip -r mpc-proxy-forge-macos-arm64.zip dist-mac-arm64/
+      - name: Copy Node runtime
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cp "$(which node)" release/node
+          chmod +x release/node
 
-          # --- LINUX ---
-          bun build ./src/index.ts --compile --target=bun-linux-x64 --external chromium-bidi --outfile mpc-proxy-forge
-          mkdir -p dist-linux/node_modules/@img
-          cp mpc-proxy-forge dist-linux/
-          cp -r node_modules/@img/sharp-linux-x64 dist-linux/node_modules/@img/
-          zip -r mpc-proxy-forge-linux.zip dist-linux/
+      - name: Copy Node runtime (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item "$env:RUNNER_TOOL_CACHE\node\*\x64\node.exe" release\node.exe
+
+      - name: Create launcher (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cat > release/mpc-proxy-forge <<'EOF'
+          #!/bin/sh
+          DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+          exec "$DIR/node" "$DIR/dist/index.js" "$@"
+          EOF
+          chmod +x release/mpc-proxy-forge
+
+      - name: Create launcher (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          @'
+          @echo off
+          "%~dp0\node.exe" "%~dp0\dist\index.js" %*
+          '@ | Set-Content release\mpc-proxy-forge.cmd
+
+      - name: Archive
+        shell: bash
+        run: |
+          cd release
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            powershell Compress-Archive * ../mpc-proxy-forge-${{ matrix.archive }}.zip
+          else
+            zip -r ../mpc-proxy-forge-${{ matrix.archive }}.zip .
+          fi
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            mpc-proxy-forge-windows.zip
-            mpc-proxy-forge-macos-x64.zip
-            mpc-proxy-forge-macos-arm64.zip
-            mpc-proxy-forge-linux.zip
+          files: mpc-proxy-forge-${{ matrix.archive }}.zip

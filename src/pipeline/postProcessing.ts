@@ -1,7 +1,7 @@
 import { DefaultProfile, type PostProcessingProfile } from "../config/processingProfileManager.js";
 import { renameWithRetry } from "../utils/fs.js";
 import type { ScryfallCard } from "../clients/scryfall.js";
-import sharp from "sharp";
+import sharp, { type Sharp } from "sharp";
 import type { MoxfieldCard } from "../clients/moxfield.js";
 import { clamp } from "../utils/math.js";
 import {
@@ -496,8 +496,8 @@ async function resizeAndCrop(buffer: Buffer, scale: number, width: number, heigh
     return await crop(sharp(newBuffer).resize(newWidth), newWidth, newHeight, width, height);
 }
 
-async function crop(sharp: sharp.Sharp, width: number, height: number, targetWidth: number, targetHeight: number) {
-    return await sharp.extract({
+async function crop(image: Sharp, width: number, height: number, targetWidth: number, targetHeight: number) {
+    return await image.extract({
         left: Math.round((width - targetWidth) / 2),
         top: Math.round((height - targetHeight) / 2),
         width: targetWidth,
