@@ -158,9 +158,7 @@ async function runUpdateProfile(profile: ProcessingProfile) {
             message: 'Browser to use:',
             choices: [
                 { name: 'Chrome', value: PlaywrightChannel.Chrome },
-                { name: 'Microsoft Edge', value: PlaywrightChannel.MicrosoftEdge },
-                { name: 'Firefox', value: PlaywrightChannel.Firefox },
-                { name: 'WebKit', value: PlaywrightChannel.WebKit }
+                { name: 'Microsoft Edge', value: PlaywrightChannel.MicrosoftEdge }
             ],
             default: profile.playwrightChannel
         }
@@ -168,7 +166,7 @@ async function runUpdateProfile(profile: ProcessingProfile) {
 
     profile.playwrightChannel = channelSelect.channel;
 
-    profile.postProcessing.upscaling = await runUpscaylSettings(profile.postProcessing.upscaling);
+    profile.upscaling = await runUpscaylSettings(profile.upscaling);
 
     console.log(ui.subtitle('Post-Processing'));
     console.log('These values will be used to help make images look better on the proxy.');

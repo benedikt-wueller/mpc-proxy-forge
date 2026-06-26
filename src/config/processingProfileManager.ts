@@ -6,7 +6,8 @@ export interface ProcessingProfile {
     name: string;
     outputDirectory: string;
     playwrightChannel: PlaywrightChannel,
-    postProcessing: PostProcessingProfile
+    postProcessing: PostProcessingProfile,
+    upscaling: UpscaylSettings,
 }
 
 export interface PostProcessingProfile {
@@ -15,7 +16,6 @@ export interface PostProcessingProfile {
     cornerRadius: number,
     bleedWidth: number,
     borderCrop: number,
-    upscaling: UpscaylSettings,
     copyrightBehavior: 'keep' | 'blur' | 'proxy',
     blurStrength: number
 }
@@ -44,12 +44,12 @@ export const DefaultProfile: ProcessingProfile = {
         cornerRadius: 0.06,
         bleedWidth: 0.12,
         borderCrop: 0.005,
-        upscaling: {
-            enabled: true,
-            model: 'upscayl-standard-4x'
-        },
         copyrightBehavior: 'proxy',
         blurStrength: 10,
+    },
+    upscaling: {
+        enabled: true,
+        model: 'upscayl-standard-4x'
     }
 };
 

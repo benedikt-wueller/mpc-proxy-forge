@@ -1,28 +1,28 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { exists, grantExecutionPermission, renameWithRetry } from "../utils/fs.js";
-import type { PostProcessingProfile } from "../config/processingProfileManager.js";
+import type { PostProcessingProfile, UpscaylSettings } from "../config/processingProfileManager.js";
 import { exec } from "node:child_process";
 import sharp from 'sharp';
 import { downloadGitHubDirectory, downloadLatestRelease } from "./githubDownloader.js";
 
-export async function upscaleImage(filePath: string, config: PostProcessingProfile) {
-    if (!config.upscaling.enabled) return;
+export async function upscaleImage(filePath: string, postProcessing: PostProcessingProfile, upscaling: UpscaylSettings) {
+    if (!upscaling.enabled) return;
 
-    const upscaylBinary = path.join(config.upscaling.binaryFile!);
+    const upscaylBinary = path.join(upscaling.binaryFile!);
 
     const temporaryPath = filePath.replace('.png', '-temp.png');
 
     const imageMetadata = await sharp(filePath).metadata();
     const width = imageMetadata.width;
-    const targetWidth = Math.round(config.cardWidth * config.dpi);
+    const targetWidth = Math.round(postProcessing.cardWidth * postProcessing.dpi);
 
     let scale = Math.ceil(targetWidth / width);
     if (scale < 1) scale = 1;
     if (scale > 4) scale = 4;
 
     await new Promise((resolve, reject) => {
-        exec(`${upscaylBinary} -i "${filePath}" -o "${temporaryPath}" -n ${config.upscaling.model} -s ${scale}`, (err) => {
+        exec(`${upscaylBinary} -i "${filePath}" -o "${temporaryPath}" -n ${upscaling.model} -s ${scale}`, (err) => {
             if (err) {
                 console.error(err);
                 reject(err);

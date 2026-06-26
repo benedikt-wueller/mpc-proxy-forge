@@ -264,9 +264,9 @@ function createPipelineTasks(cardsDir: string, profile: ProcessingProfile): List
             queueState: ProcessingState.PostProcessed,
             nextState: ProcessingState.Upscaled,
             statKey: 'upscaled',
-            skip: !profile.postProcessing.upscaling.enabled,
+            skip: !profile.upscaling.enabled,
             handler: async (_ctx, item) => {
-                await upscaleImage(path.join(cardsDir, item.path), profile.postProcessing);
+                await upscaleImage(path.join(cardsDir, item.path), profile.postProcessing, profile.upscaling);
             }
         }),
         pipelineStage({

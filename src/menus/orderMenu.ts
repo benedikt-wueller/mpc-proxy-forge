@@ -259,10 +259,12 @@ async function runUpdateOrder(order: Order) {
                 validate: validateAnySelected
             }]);
 
+        // TODO: ask for token quantity if selected
+
         decks.push(previousDeckConfig);
     }
 
-    // TODO: ask for token quantity if selected
+    // TODO: show warning if largest bracket too small
 
     order = {
         ...order,
