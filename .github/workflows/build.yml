@@ -29,28 +29,28 @@ jobs:
       - name: Build and Package
         run: |
           # --- WINDOWS ---
-          bun build ./src/index.ts --compile --target=bun-windows-x64 --outfile mpc-proxy-forge.exe
+          bun build ./src/index.ts --compile --target=bun-windows-x64 --external chromium-bidi --outfile mpc-proxy-forge.exe
           mkdir -p dist-win/node_modules/@img
           cp mpc-proxy-forge.exe dist-win/
           cp -r node_modules/@img/sharp-win32-x64 dist-win/node_modules/@img/
           zip -r mpc-proxy-forge-windows.zip dist-win/
 
           # --- MACOS X64 ---
-          bun build ./src/index.ts --compile --target=bun-darwin-x64 --outfile mpc-proxy-forge
+          bun build ./src/index.ts --compile --target=bun-darwin-x64 --external chromium-bidi --outfile mpc-proxy-forge
           mkdir -p dist-mac-x64/node_modules/@img
           cp mpc-proxy-forge dist-mac-x64/
           cp -r node_modules/@img/sharp-darwin-x64 dist-mac-x64/node_modules/@img/
           zip -r mpc-proxy-forge-macos-x64.zip dist-mac-x64/
 
           # --- MACOS ARM64 ---
-          bun build ./src/index.ts --compile --target=bun-darwin-arm64 --outfile mpc-proxy-forge
+          bun build ./src/index.ts --compile --target=bun-darwin-arm64 --external chromium-bidi --outfile mpc-proxy-forge
           mkdir -p dist-mac-arm64/node_modules/@img
           cp mpc-proxy-forge dist-mac-arm64/
           cp -r node_modules/@img/sharp-darwin-arm64 dist-mac-arm64/node_modules/@img/
           zip -r mpc-proxy-forge-macos-arm64.zip dist-mac-arm64/
 
           # --- LINUX ---
-          bun build ./src/index.ts --compile --target=bun-linux-x64 --outfile mpc-proxy-forge
+          bun build ./src/index.ts --compile --target=bun-linux-x64 --external chromium-bidi --outfile mpc-proxy-forge
           mkdir -p dist-linux/node_modules/@img
           cp mpc-proxy-forge dist-linux/
           cp -r node_modules/@img/sharp-linux-x64 dist-linux/node_modules/@img/
