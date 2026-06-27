@@ -21,6 +21,9 @@ MPC Autofill will load the processed card images from the `cards` directory next
 
 ## Examples
 
+> [!NOTE]
+> The quality of the processed and upscaled images will vary based on the the quality of the original Scryfall scans, the cards artwork and the upscaling model used. When building your deck in Moxfield, make sure to select printings that have a good base resolution and adequate quality overall.
+
 TODO
 
 ---
@@ -73,7 +76,10 @@ If you want to modify the code or build the CLI executables yourself, follow the
 
 # Contribution
 
-TODO
+Feel free to create issues for any bugs you encounter or features you'd like to be added.
+
+I may not have the time to implement all the features requested but I invite anyone (that is a real person) to create pull requests to add them.
+There really are no strict coding guidelines as I am relatively new to typescript myself. Just try to keep the overall style consistent across the project.
 
 # Disclaimer
 
