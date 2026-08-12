@@ -46,11 +46,13 @@ const scryfallImageBottleneck = new Bottleneck({
     minTime: 100
 })
 
+const scryfallUserAgent = "MoxfieldMPCAutofillConverter/1.0";
+
 export async function findScryfallCard(card: MoxfieldCardDetails) {
     let headers = new Headers({
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "User-Agent": "MoxfieldMPCAutofillConverter/1.0"
+        "User-Agent": scryfallUserAgent
     });
 
     let response = await scryfallBottleneck.schedule(() => fetch(`https://api.scryfall.com/cards/${card.scryfall_id}`, { headers }));
@@ -71,7 +73,12 @@ export async function findScryfallCard(card: MoxfieldCardDetails) {
 export async function downloadScryfallImage(url: string, path: string): Promise<string | undefined> {
     if (await exists(path)) return Promise.resolve(path);
 
-    const resp = await scryfallImageBottleneck.schedule(() => fetch(url));
+    const resp = await scryfallImageBottleneck.schedule(() => fetch(url, {
+        headers: {
+            "Accept": "image/png,image/*;q=0.9,*/*;q=0.8",
+            "User-Agent": scryfallUserAgent
+        }
+    }));
     if (resp.ok && resp.body) {
         const writer = createWriteStream(path)
         Readable.fromWeb(resp.body as any).pipe(writer);

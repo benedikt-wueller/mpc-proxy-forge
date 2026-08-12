@@ -11,11 +11,12 @@ My friends and I enjoy building Magic: The Gathering decks on Moxfield and we re
 After configuring how the Scryfall cards should be processed and selecting which decks to prepare for ordering, the tool runs through the following steps:
 1. Load the moxfield deck details
 2. Download the Scryfall images for the exact prints selected in the Moxfield deck
-3. Cleanup card corners and borders
+3. Clean up card corners and borders
 4. Add bleed edge for card cutting
-5. (optional) Replace copyright notice with `Proxy - Not For Sale` notice
-6. (optional) Upscale the images to target DPI (800 by default)
-7. Create `cards.xml` file for MPC Autofill processing
+5. Remove holo stamps
+6. (optional) Replace copyright notice with `Proxy - Not For Sale` notice
+7. (optional) Upscale the images to target DPI (800 by default)
+8. Create `cards.xml` file for MPC Autofill processing
 
 MPC Autofill will load the processed card images from the `cards` directory next to the generated `cards.xml` file.
 

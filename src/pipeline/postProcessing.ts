@@ -305,7 +305,7 @@ async function applyProxyNote(buffer: Buffer, config: PostProcessingProfile, scr
             proxyBox = PROXY_NOTE_POSITIONS[frame].default;
         }
     } else {
-        if (typeLine.includes('Plane') || typeLine.includes('Phenomenon')) {
+        if ((!typeLine.includes('Planeswalker') && typeLine.includes('Plane')) || typeLine.includes('Phenomenon')) {
             proxyBox = PROXY_NOTE_POSITIONS['2015'].planechase;
         } else {
             proxyBox = PROXY_NOTE_POSITIONS['2015'].default;
