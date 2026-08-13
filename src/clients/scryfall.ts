@@ -11,6 +11,7 @@ export type ScryfallCard = {
     set: string,
     collector_number: string
     lang: string,
+    image_status?: string,
     image_uris?: ScryfallImageUris,
     card_faces?: ScryfallCardFace[],
     full_art: boolean,

@@ -66,11 +66,11 @@ If you want to modify the code or build the CLI executables yourself, follow the
    ```bash
    npm install
    ```
-4. Run the tool in development mode:
+3. Run the tool in development mode:
    ```bash
    npm run dev
    ```
-5. Compile to JavaScript:
+4. Compile to JavaScript:
    ```bash
    npm run build
    ```

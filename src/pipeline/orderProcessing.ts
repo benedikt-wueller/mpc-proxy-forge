@@ -4,7 +4,6 @@ import { delay, Listr, type ListrTask } from "listr2";
 import {
     getMoxfieldDetails,
     type MoxfieldBoard,
-    type MoxfieldCard,
     type MoxfieldCardPrintingData,
     type MoxfieldDeck
 } from "../clients/moxfield.js";
@@ -63,14 +62,44 @@ export async function processOrder(order: Order) {
     const context = createContext();
 
     try {
-        const tasks = new Listr([
+        const initialTasks = new Listr([
             loadDeckDetails(order, processingProfile),
             collectCardDetails(),
+        ]);
+
+        await initialTasks.run(context);
+
+        if (Object.keys(context.missingCards).length > 0) {
+            console.log(ui.attention(`The following cards were not found on Scryfall and will be skipped:`));
+            Object.values(context.missingCards).forEach(name => console.log(`- ${name}`));
+
+            console.log(ui.information('You can still process the order, but some images will be missing.'));
+            const choice = await confirmDialog('Do you want to process the order anyway?', true);
+            if (!choice) {
+                context.aborted = true;
+                throw new Error('Order processing cancelled by user');
+            }
+        }
+
+        const lowResCards = Object.values(context.cards).filter(x => x.scryfallCard.image_status === 'lowres');
+        if (lowResCards.length > 0) {
+            console.log(ui.attention(`The following cards are reported by Scryfall as low-resolution:`));
+            lowResCards.forEach(card => console.log(`- ${card.scryfallCard.name} (${card.scryfallCard.set.toUpperCase()} ${card.scryfallCard.collector_number})`));
+
+            console.log(ui.information('You can still process the order, but the proxy quality of these images may be lower than expected.'));
+            const choice = await confirmDialog('Do you want to process the order anyway?', true);
+            if (!choice) {
+                context.aborted = true;
+                throw new Error('Order processing cancelled by user');
+            }
+        }
+
+        const processingTasks = new Listr([
             runImagePipeline(order, cardsDir, processingProfile),
             writeMpcXml(order, mainDir)
         ]);
 
-        await tasks.run(context);
+        await processingTasks.run(context);
         console.log('\n' + ui.success(`Order processing complete. You can find your files at ${mainDir}`));
         console.log(ui.information('To complete your order, move these files to the MPC Autofill directory or copy the autofill binary to the this directory and run it.'));
     } catch (err) {
@@ -171,7 +200,7 @@ function collectCardDetails(): ListrTask {
 
                             const scryfallCard = await findScryfallCard(card.card);
                             if (!scryfallCard) {
-                                ctx.missingCards[card.card.id] = card.card.name;
+                                ctx.missingCards[card.card.id] = `${card.card.name} (${card.card.set.toUpperCase()} ${card.card.cn})`;
                                 continue;
                             }
 
@@ -189,10 +218,12 @@ function collectCardDetails(): ListrTask {
     };
 }
 
+
 function runImagePipeline(order: Order, cardsDir: string, profile: ProcessingProfile): ListrTask {
     return {
         title: 'Processing order images',
         task: async (ctx: Context, task) => {
+            if (ctx.aborted) return;
             enqueueCards(ctx, order);
             return task.newListr(createPipelineTasks(cardsDir, profile), { concurrent: true });
         }
@@ -337,7 +368,7 @@ function pipelineStage(options: PipelineStageOptions): ListrTask {
                         await options.handler(ctx, item);
                     }
                 } catch (err) {
-                    // Keep the in-flight item in its queue so it is not lost on resume,
+                    // Keep the in-flight item in its queue so it is not lost on resume
                     // and signal all other concurrent stages to stop mutating files/state.
                     queue.cards.unshift(item);
                     ctx.aborted = true;
@@ -362,6 +393,8 @@ function writeMpcXml(order: Order, mainDir: string): ListrTask {
     return {
         title: 'Creating MPC Autofill XML',
         task: async (ctx: Context) => {
+            if (ctx.aborted) return;
+
             const cardsToOrder = Object.values(ctx.decks).map(x => x.cards).reduce((acc, val) => [...acc, ...val], []);
             const processedItems = Object.values(ctx.queues).map(x => x.cards).reduce((acc, val) => [...acc, ...val], []);
             const xml = createMpcAutofillOrder(order, processedItems, cardsToOrder);
