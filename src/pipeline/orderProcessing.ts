@@ -1,7 +1,13 @@
 import { type DeckConfig, DeckData, type Order, saveOrder } from "../config/orderConfigManager.js";
 import { type CardQueueItem, ProcessingState, type Queue, type Queues } from "./types.js";
 import { delay, Listr, type ListrTask } from "listr2";
-import { getMoxfieldDetails, type MoxfieldBoard, type MoxfieldCard, type MoxfieldDeck } from "../clients/moxfield.js";
+import {
+    getMoxfieldDetails,
+    type MoxfieldBoard,
+    type MoxfieldCard,
+    type MoxfieldCardPrintingData,
+    type MoxfieldDeck
+} from "../clients/moxfield.js";
 import type { ProcessingProfile } from "../config/processingProfileManager.js";
 import { ui } from "../ui/theme.js";
 import chalk from "chalk";
@@ -20,13 +26,13 @@ interface Context {
         [url: string]: {
             config: DeckConfig,
             moxfield: MoxfieldDeck,
-            cards: MoxfieldCard[]
+            cards: MoxfieldCardPrintingData[]
         }
     },
     cards: {
         [moxfieldId: string]: {
             scryfallCard: ScryfallCard,
-            moxfieldCard: MoxfieldCard
+            moxfieldCard: MoxfieldCardPrintingData
         }
     },
     queues: Queues,
@@ -138,7 +144,11 @@ function collectCardDetails(): ListrTask {
                     title: `Collecting ${chalk.green(deck.moxfield.name)} card details`,
                     task: async (_, subtask) => {
                         const boardsToInclude = ['commanders', 'companions', ...deck.config.data, 'signatureSpells'];
-                        const cards = boardsToInclude.map(board => (deck.moxfield.boards as any)[board]).flatMap((board: MoxfieldBoard) => Object.values(board.cards));
+
+                        const cards = boardsToInclude
+                            .map(board => (deck.moxfield.boards as any)[board])
+                            .flatMap((board: MoxfieldBoard) => Object.values(board.cards))
+                            .flatMap(card => card.printingData || [card]);
 
                         if (deck.config.data.includes(DeckData.Tokens)) {
                             deck.moxfield.tokens.filter(token => token.isToken).forEach(token => {
@@ -190,7 +200,7 @@ function runImagePipeline(order: Order, cardsDir: string, profile: ProcessingPro
 }
 
 function enqueueCards(ctx: Context, order: Order) {
-    for (const key of Object.keys(ctx.cards)) {
+    for (const [index, key] of Object.keys(ctx.cards).entries()) {
         const card = ctx.cards[key]!;
 
         const frontImage = card.scryfallCard.image_uris?.png || card.scryfallCard.card_faces?.at(0)?.image_uris?.png;
@@ -203,7 +213,7 @@ function enqueueCards(ctx: Context, order: Order) {
             id: key,
             face: 'front',
             scryfallUrl: frontImage,
-            path: `${key}-front.png`,
+            path: `${key}-${index}-front.png`,
             state: ProcessingState.NotDownloaded
         });
 
@@ -213,7 +223,7 @@ function enqueueCards(ctx: Context, order: Order) {
                 id: key,
                 face: 'back',
                 scryfallUrl: backImage,
-                path: `${key}-back.png`,
+                path: `${key}-${index}-back.png`,
                 state: ProcessingState.NotDownloaded
             });
         }

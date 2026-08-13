@@ -28,9 +28,13 @@ export type MoxfieldBoard = {
     cards: Record<string, MoxfieldCard>
 }
 
-export type MoxfieldCard = {
+export type MoxfieldCard = MoxfieldCardPrintingData & {
+    printingData?: MoxfieldCardPrintingData[]
+}
+
+export type MoxfieldCardPrintingData = {
     quantity: number,
-    card: MoxfieldCardDetails
+    card: MoxfieldCardDetails,
 }
 
 export type MoxfieldCardDetails = {

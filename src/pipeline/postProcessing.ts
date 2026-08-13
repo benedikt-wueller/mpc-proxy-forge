@@ -2,7 +2,7 @@ import { DefaultProfile, type PostProcessingProfile } from "../config/processing
 import { renameWithRetry } from "../utils/fs.js";
 import type { ScryfallCard } from "../clients/scryfall.js";
 import sharp, { type Sharp } from "sharp";
-import type { MoxfieldCard } from "../clients/moxfield.js";
+import type { MoxfieldCardPrintingData } from "../clients/moxfield.js";
 import { clamp } from "../utils/math.js";
 import {
     type BlackoutBox,
@@ -27,7 +27,7 @@ interface CompositeBox {
 
 export async function postProcessImage(filePath: string, card: {
     scryfallCard: ScryfallCard,
-    moxfieldCard: MoxfieldCard
+    moxfieldCard: MoxfieldCardPrintingData
 }, face: 'front' | 'back', config: PostProcessingProfile) {
     const tmpFilePath = filePath.replace('.png', '-temp.png');
 
@@ -158,7 +158,7 @@ async function borderCrop(buffer: Buffer, config: PostProcessingProfile, scryfal
     }).png().toBuffer();
 }
 
-async function removeCopyright(buffer: Buffer, config: PostProcessingProfile, scryfallCard: ScryfallCard, moxfieldCard: MoxfieldCard, face: 'front' | 'back') {
+async function removeCopyright(buffer: Buffer, config: PostProcessingProfile, scryfallCard: ScryfallCard, moxfieldCard: MoxfieldCardPrintingData, face: 'front' | 'back') {
     if (config.copyrightBehavior === 'keep') return buffer;
 
     const img = sharp(buffer);
@@ -281,7 +281,7 @@ async function applyBlurredBoxes(buffer: Buffer, boxes: CompositeBox[], strength
     }
 }
 
-async function applyProxyNote(buffer: Buffer, config: PostProcessingProfile, scryfallCard: ScryfallCard, moxfieldCard: MoxfieldCard, face: 'front' | 'back') {
+async function applyProxyNote(buffer: Buffer, config: PostProcessingProfile, scryfallCard: ScryfallCard, moxfieldCard: MoxfieldCardPrintingData, face: 'front' | 'back') {
     if (config.copyrightBehavior !== 'proxy') return buffer;
 
     const img = sharp(buffer);
