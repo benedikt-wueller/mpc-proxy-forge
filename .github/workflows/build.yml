@@ -96,6 +96,10 @@ jobs:
           cat > release/mpc-proxy-forge <<'EOF'
           #!/bin/sh
           DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+          # macOS refuses to load quarantined native modules, which makes sharp fall back to its WebAssembly build.
+          if [ "$(uname)" = "Darwin" ]; then
+            xattr -dr com.apple.quarantine "$DIR/node_modules" 2>/dev/null
+          fi
           exec "$DIR/node" "$DIR/dist/index.js" "$@"
           EOF
 
