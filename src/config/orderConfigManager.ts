@@ -3,17 +3,22 @@ import path from 'node:path';
 import { exists } from "../utils/fs.js";
 import { type CARD_STOCKS, DEFAULT_CARD_STOCK } from "../output/mpcAutofill.js";
 import type { CardQueueItem } from "../pipeline/types.js";
-import { type ProcessingProfile, DefaultProfile } from "./processingProfileManager.js";
+import { type ProcessingProfile, DefaultProfile, type PdfLayout } from "./processingProfileManager.js";
 
 export interface Order {
     name: string;
     profile: ProcessingProfile;
     cardStock: (typeof CARD_STOCKS)[number],
     foil: boolean,
+    outputMode: OutputMode,
+    pagesPerPdf: number,
+    pdfLayoutOverride?: PdfLayout | undefined,
     decks: DeckConfig[];
     cardBack: string;
     states: CardQueueItem[];
 }
+
+export type OutputMode = 'mpc' | 'pdf';
 
 export interface DeckConfig {
     url: string;
@@ -40,6 +45,8 @@ export const DefaultOrder: Order = {
     profile: DefaultProfile,
     cardStock: DEFAULT_CARD_STOCK,
     foil: false,
+    outputMode: 'mpc',
+    pagesPerPdf: 18,
     cardBack: '1LrVX0pUcye9n_0RtaDNVl2xPrQgn7CYf',
     decks: [],
     states: []

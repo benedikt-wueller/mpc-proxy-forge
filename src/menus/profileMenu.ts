@@ -168,6 +168,24 @@ async function runUpdateProfile(profile: ProcessingProfile) {
 
     profile.upscaling = await runUpscaylSettings(profile.upscaling);
 
+    console.log(ui.subtitle('PDF Layout'));
+    console.log('Used by the PDF output mode. Defines where the base card (without bleed) is placed on the 3.5x3.5 inch page. Bleed extends outwards.');
+    console.log('Orders reuse these values unless they override them.\n');
+
+    const layout = await inquirer.prompt([
+        { type: 'input', name: 'marginLeft', message: 'Margin left (mm):', default: String(profile.pdfLayout.marginLeft), validate: (v) => validateNumberFromString(v, 'Margin left') },
+        { type: 'input', name: 'marginTop', message: 'Margin top (mm):', default: String(profile.pdfLayout.marginTop), validate: (v) => validateNumberFromString(v, 'Margin top') },
+        { type: 'input', name: 'printWidth', message: 'Print width (mm):', default: String(profile.pdfLayout.printWidth), validate: (v) => validateNumberFromString(v, 'Print width', 1) },
+        { type: 'input', name: 'printHeight', message: 'Print height (mm):', default: String(profile.pdfLayout.printHeight), validate: (v) => validateNumberFromString(v, 'Print height', 1) }
+    ]);
+
+    profile.pdfLayout = {
+        marginLeft: parseFloat(layout.marginLeft),
+        marginTop: parseFloat(layout.marginTop),
+        printWidth: parseFloat(layout.printWidth),
+        printHeight: parseFloat(layout.printHeight)
+    };
+
     console.log(ui.subtitle('Post-Processing'));
     console.log('These values will be used to help make images look better on the proxy.');
     console.log('If unsure, leave these values as-is.\n');

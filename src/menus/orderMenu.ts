@@ -10,7 +10,7 @@ import {
 import inquirer from "inquirer";
 import { CARD_STOCK_FOIL_POSSIBLE, CARD_STOCKS } from "../output/mpcAutofill.js";
 import { processOrder } from "../pipeline/orderProcessing.js";
-import { type ProcessingProfile } from "../config/processingProfileManager.js";
+import { type PdfLayout, type ProcessingProfile } from "../config/processingProfileManager.js";
 import { exists } from "../utils/fs.js";
 import path from "node:path";
 import { rm } from "node:fs/promises";
@@ -186,11 +186,38 @@ async function runUpdateOrder(order: Order) {
         processingProfile = await runSelectProfile('Which processing profile?', false, false, false, true);
     } while (!processingProfile);
 
+    const outputAnswers = await inquirer.prompt([
+        {
+            type: 'select',
+            name: 'outputMode',
+            message: 'Output mode:',
+            choices: [
+                { name: 'MPC Autofill (XML + images)', value: 'mpc' },
+                { name: 'PDF files (one card per 3.5x3.5 inch page)', value: 'pdf' }
+            ],
+            default: order.outputMode
+        },
+        {
+            type: 'number',
+            name: 'pagesPerPdf',
+            message: 'Pages per PDF:',
+            when: (answers) => answers.outputMode === 'pdf',
+            default: order.pagesPerPdf,
+            validate: (value) => Number.isInteger(value) && value! > 0 ? true : 'Pages per PDF must be a positive whole number'
+        }
+    ]);
+
+    let pdfLayoutOverride: PdfLayout | undefined;
+    if (outputAnswers.outputMode === 'pdf') {
+        pdfLayoutOverride = await promptPdfLayout(processingProfile.pdfLayout, order.pdfLayoutOverride);
+    }
+
     const answers = await inquirer.prompt([
         {
             type: 'select',
             name: 'cardStock',
             message: 'MPC Card Stock:',
+            when: () => outputAnswers.outputMode === 'mpc',
             choices: CARD_STOCKS.map(stock => ({ name: stock, value: stock })),
             default: order.cardStock
         },
@@ -198,13 +225,14 @@ async function runUpdateOrder(order: Order) {
             type: 'confirm',
             name: 'foil',
             message: 'Foil?',
-            when: (answers) => CARD_STOCK_FOIL_POSSIBLE[answers.cardStock as (typeof CARD_STOCKS)[number]],
+            when: (answers) => outputAnswers.outputMode === 'mpc' && CARD_STOCK_FOIL_POSSIBLE[answers.cardStock as (typeof CARD_STOCKS)[number]],
             default: order.foil
         },
         {
             type: 'input',
             name: 'cardBack',
             message: 'MPC Autofill Card Back ID:',
+            when: () => outputAnswers.outputMode === 'mpc',
             default: order.cardBack
         },
         {
@@ -269,9 +297,12 @@ async function runUpdateOrder(order: Order) {
     order = {
         ...order,
         profile: processingProfile,
-        cardStock: answers.cardStock,
-        foil: CARD_STOCK_FOIL_POSSIBLE[answers.cardStock as (typeof CARD_STOCKS)[number]] && answers.foil,
-        cardBack: answers.cardBack,
+        cardStock: answers.cardStock ?? order.cardStock,
+        foil: outputAnswers.outputMode === 'mpc' ? CARD_STOCK_FOIL_POSSIBLE[answers.cardStock as (typeof CARD_STOCKS)[number]] && answers.foil : order.foil,
+        cardBack: answers.cardBack ?? order.cardBack,
+        outputMode: outputAnswers.outputMode,
+        pagesPerPdf: outputAnswers.pagesPerPdf ?? order.pagesPerPdf,
+        pdfLayoutOverride,
         decks
     };
 
@@ -300,4 +331,30 @@ function validateMoxfieldUrl(value: string) {
         // Nothing to do.
     }
     return 'Please enter a valid Moxfield deck URL.';
+}
+async function promptPdfLayout(profileLayout: PdfLayout, current?: PdfLayout): Promise<PdfLayout | undefined> {
+    const describe = (l: PdfLayout) => `left ${l.marginLeft}mm, top ${l.marginTop}mm, ${l.printWidth}x${l.printHeight}mm`;
+    console.log(ui.information(`Profile PDF layout: ${describe(profileLayout)}`));
+
+    const override = await confirmDialog('Override the PDF layout of the profile for this order?', !!current);
+    if (!override) return undefined;
+
+    const base = current ?? profileLayout;
+    const positive = (name: string, min: number) => (value: string) => {
+        const num = parseFloat(value);
+        return !isNaN(num) && num >= min ? true : `${name} must be a number of at least ${min}`;
+    };
+    const answers = await inquirer.prompt([
+        { type: 'input', name: 'marginLeft', message: 'Margin left (mm):', default: String(base.marginLeft), validate: positive('Margin left', -1000) },
+        { type: 'input', name: 'marginTop', message: 'Margin top (mm):', default: String(base.marginTop), validate: positive('Margin top', -1000) },
+        { type: 'input', name: 'printWidth', message: 'Print width (mm):', default: String(base.printWidth), validate: positive('Print width', 1) },
+        { type: 'input', name: 'printHeight', message: 'Print height (mm):', default: String(base.printHeight), validate: positive('Print height', 1) }
+    ]);
+
+    return {
+        marginLeft: parseFloat(answers.marginLeft),
+        marginTop: parseFloat(answers.marginTop),
+        printWidth: parseFloat(answers.printWidth),
+        printHeight: parseFloat(answers.printHeight)
+    };
 }

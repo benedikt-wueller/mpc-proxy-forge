@@ -8,6 +8,15 @@ export interface ProcessingProfile {
     playwrightChannel: PlaywrightChannel,
     postProcessing: PostProcessingProfile,
     upscaling: UpscaylSettings,
+    pdfLayout: PdfLayout,
+}
+
+// All values in millimeters. Describes where the base card (without bleed) is placed on the page.
+export interface PdfLayout {
+    marginLeft: number,
+    marginTop: number,
+    printWidth: number,
+    printHeight: number
 }
 
 export interface PostProcessingProfile {
@@ -50,6 +59,12 @@ export const DefaultProfile: ProcessingProfile = {
     upscaling: {
         enabled: true,
         model: 'upscayl-standard-4x'
+    },
+    pdfLayout: {
+        marginLeft: 13.75,
+        marginTop: 2,
+        printWidth: 59.433,
+        printHeight: 83.2
     }
 };
 

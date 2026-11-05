@@ -17,6 +17,7 @@ import { exists } from "../utils/fs.js";
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { postProcessImage } from "./postProcessing.js";
 import { createMpcAutofillOrder } from "../output/mpcAutofill.js";
+import { createPdfOrder } from "../output/pdf.js";
 import sharp from "sharp";
 import { confirmDialog } from "../utils/dialog.js";
 
@@ -96,12 +97,16 @@ export async function processOrder(order: Order) {
 
         const processingTasks = new Listr([
             runImagePipeline(order, cardsDir, processingProfile),
-            writeMpcXml(order, mainDir)
+            order.outputMode === 'pdf' ? writePdfs(order, mainDir, cardsDir) : writeMpcXml(order, mainDir)
         ]);
 
         await processingTasks.run(context);
         console.log('\n' + ui.success(`Order processing complete. You can find your files at ${mainDir}`));
-        console.log(ui.information('To complete your order, move these files to the MPC Autofill directory or copy the autofill binary to the this directory and run it.'));
+        if (order.outputMode === 'pdf') {
+            console.log(ui.information('Your PDFs are located in the "pdfs" directory.'));
+        } else {
+            console.log(ui.information('To complete your order, move these files to the MPC Autofill directory or copy the autofill binary to the this directory and run it.'));
+        }
     } catch (err) {
         console.error('\n' + ui.error('An error occurred:'), err);
     }
@@ -399,6 +404,20 @@ function writeMpcXml(order: Order, mainDir: string): ListrTask {
             const processedItems = Object.values(ctx.queues).map(x => x.cards).reduce((acc, val) => [...acc, ...val], []);
             const xml = createMpcAutofillOrder(order, processedItems, cardsToOrder);
             await writeFile(path.join(mainDir, 'cards.xml'), xml);
+        }
+    };
+}
+
+function writePdfs(order: Order, mainDir: string, cardsDir: string): ListrTask {
+    return {
+        title: 'Creating PDFs',
+        task: async (ctx: Context, task) => {
+            if (ctx.aborted) return;
+
+            const cardsToOrder = Object.values(ctx.decks).map(x => x.cards).reduce((acc, val) => [...acc, ...val], []);
+            const processedItems = Object.values(ctx.queues).map(x => x.cards).reduce((acc, val) => [...acc, ...val], []);
+            const files = await createPdfOrder(order, processedItems, cardsToOrder, cardsDir, path.join(mainDir, 'pdfs'));
+            task.title = `Creating PDFs (${files.length} files)`;
         }
     };
 }
